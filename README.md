@@ -9,11 +9,11 @@ any runtime overhead.
 ### Using Zig Package Manager
 
 Run `zig fetch --save https://github.com/fig-eater/zig-function-overloading/archive/refs/heads/main.tar.gz`
-within your project directory.
+within your project directory. Run this again if you ever want to update the dependency.
 
-Then add an import to similar  to your `build.zig`
+Then add an import to the module which needs overloading to your `build.zig`
 
-This code is an example of how you might do this
+This code is an example of how you might do this:
 
 ```zig
 
