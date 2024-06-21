@@ -4,7 +4,7 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    const overloading_module = b.addModule("overloading", .{ .root_source_Wfile = .{
+    const overloading_module = b.addModule("overloading", .{ .root_source_file = .{
         .src_path = .{
             .owner = b,
             .sub_path = "src/overloading.zig",
