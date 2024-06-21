@@ -6,12 +6,38 @@ any runtime overhead.
 
 ## Install
 
-run `zig fetch --save https://github.com/fig-eater/zig-function-overloading/archive/refs/heads/main.tar.gz` within your project directory
+### Using Zig Package Manager
 
-or
+Run `zig fetch --save https://github.com/fig-eater/zig-function-overloading/archive/refs/heads/main.tar.gz`
+within your project directory.
 
-Download [src/overloading.zig](./src/overloading.zig)
+Then add an import to similar  to your `build.zig`
 
+This code is an example of how you might do this
+
+```zig
+
+const overloading_dependency = b.dependency("overloading", .{
+    .target = target,
+    .optimize = optimize,
+});
+
+// in a default project `compile_step` might be `lib` or `exe`.
+// replace the first "overloading" here to avoid namespace conflicts or to change the name of the import for your project.
+compile_step.root_module.addImport("overloading", overloading_dependency.module("overloading"));
+
+```
+
+### Manually
+
+Download [src/overloading.zig](./src/overloading.zig) and save in your project.
+
+Import directly using `@import("path/to/overloading.zig")`
+
+*or*
+
+See [build.zig](./build.zig) for an example of how to use this as a local
+module.
 
 ## Usage
 
@@ -19,7 +45,8 @@ Call `make` with a touple of functions, `make` will return a function which when
 called will call a function in the touple with corresponding argument types.
 All functions passed in the touple must have the same return type.
 Functions in the touple cannot have the same arguments as others in the touple.
-If a function takes no arguments, pass `{}` into the overloaded function to call it.
+If a function takes no arguments, pass `{}` into the overloaded function to call
+it.
 
 Example:
 ```zig
