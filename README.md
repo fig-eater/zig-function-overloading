@@ -6,8 +6,7 @@ any runtime overhead.
 
 ## Install
 
-run `zig fetch --save https://github.com/fig-eater/zig-function-overloading/archive/
-refs/heads/main.tar.gz` within your project directory
+run `zig fetch --save https://github.com/fig-eater/zig-function-overloading/archive/refs/heads/main.tar.gz` within your project directory
 
 or
 
