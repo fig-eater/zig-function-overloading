@@ -10,13 +10,13 @@
 /// Usage:
 ///
 /// Import the `overloading` module or `overloading.zig` if saved locally.
-/// Call `overloading.make` with a touple of functions, `make` will return a function which when
-/// called will call a function in the touple with corresponding argument types.
+/// Call `overloading.make` with a tuple of functions, `make` will return a function which when
+/// called will call a function in the tuple with corresponding argument types.
 ///
-/// All functions passed in the touple must have the same return type.
-/// Functions in the touple cannot have the same arguments as others in the touple.
+/// All functions passed in the tuple must have the same return type.
+/// Functions in the tuple cannot have the same arguments as others in the tuple.
 /// If a function takes no arguments, pass `{}` into the overloaded function to call it.
-/// If a function takes multiple arguments pass the arguments in a touple.
+/// If a function takes multiple arguments pass the arguments in a tuple.
 ///
 /// Example:
 ///
