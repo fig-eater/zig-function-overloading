@@ -41,12 +41,13 @@ module.
 
 ## Usage
 
-Call `make` with a touple of functions, `make` will return a function which when
+- Import the `overloading` module or `overloading.zig` if saved locally.
+- Call `overloading.make` with a touple of functions, `make` will return a function which when
 called will call a function in the touple with corresponding argument types.
-All functions passed in the touple must have the same return type.
-Functions in the touple cannot have the same arguments as others in the touple.
-If a function takes no arguments, pass `{}` into the overloaded function to call
-it.
+- All functions passed in the touple must have the same return type.
+- Functions in the touple cannot have the same arguments as others in the touple.
+- If a function takes no arguments, pass `{}` into the overloaded function to call it.
+- If a function takes multiple arguments pass the arguments in a touple.
 
 Example:
 ```zig
@@ -70,11 +71,12 @@ const add = overloading.make(.{
     add2,
     add3,
 });
-// add({})          returns 0
+// add({})             returns 0
+// add(3)              returns 3
 // add(.{50, 2})       returns 52
-// add(3)           returns 3
 // add(.{100, 20, 20}) returns 140
 ```
+See [example.zig](src/example.zig) for another example.
 
 ## License
 
