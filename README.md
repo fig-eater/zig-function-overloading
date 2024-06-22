@@ -71,9 +71,9 @@ const add = overloading.make(.{
     add3,
 });
 // add({})          returns 0
-// add(50, 2)       returns 52
+// add(.{50, 2})       returns 52
 // add(3)           returns 3
-// add(100, 20, 20) returns 140
+// add(.{100, 20, 20}) returns 140
 ```
 
 ## License
