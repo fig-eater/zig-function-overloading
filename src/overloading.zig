@@ -5,7 +5,7 @@
 // See included LICENSE file or https://unlicense.org
 // Attribution is appreciated but not required.
 
-/// Explict Function Overloading for Zig
+/// Explicit Function Overloading for Zig
 ///
 /// Usage:
 ///
@@ -51,17 +51,17 @@ pub fn make(comptime functions: anytype) fn (args: anytype) OverloadedFnReturnTy
     comptime {
         const ReturnType = OverloadedFnReturnType(functions);
 
-        // get function entries from the functions touple
+        // get function entries from the functions tuple
         const function_entries = functions_fields: {
             switch (@typeInfo(@TypeOf(functions))) {
                 .Struct => |s| if (s.is_tuple) break :functions_fields s.fields,
                 else => {},
             }
-            @compileError("Expected `functions` to be touple found " ++
+            @compileError("Expected `functions` to be tuple found " ++
                 @typeName(@TypeOf(functions)));
         };
 
-        // Check for inconsistant function return types, make sure the touple only has functions,
+        // Check for inconsistent function return types, make sure the tuple only has functions,
         // and set these function lists
         var void_function: ?usize = null;
         var single_arg_functions: []const usize = &.{};
@@ -70,7 +70,7 @@ pub fn make(comptime functions: anytype) fn (args: anytype) OverloadedFnReturnTy
             switch (@typeInfo(entry.type)) {
                 .Fn => |func| {
                     if (func.return_type != ReturnType)
-                        @compileError("inconsistant function return types, expected " ++
+                        @compileError("inconsistent function return types, expected " ++
                             @typeName(ReturnType) ++ " found " ++ @typeName(func.return_type));
 
                     switch (func.params.len) {
@@ -79,7 +79,7 @@ pub fn make(comptime functions: anytype) fn (args: anytype) OverloadedFnReturnTy
                         else => multi_arg_functions = multi_arg_functions ++ .{i},
                     }
                 },
-                else => @compileError("Expected `functions` to be touple of functions, found " ++
+                else => @compileError("Expected `functions` to be tuple of functions, found " ++
                     @typeName(entry.type)),
             }
         }
@@ -100,7 +100,7 @@ pub fn make(comptime functions: anytype) fn (args: anytype) OverloadedFnReturnTy
         const MatchingFunctionType = enum { none, single, multiple };
 
         return struct {
-            fn overloadedfn(args: anytype) ReturnType {
+            fn overloadedFn(args: anytype) ReturnType {
                 const func, const matching_type: MatchingFunctionType = comptime is_single_block: {
                     const ArgsType = @TypeOf(args);
                     const args_ti = @typeInfo(ArgsType);
@@ -112,7 +112,7 @@ pub fn make(comptime functions: anytype) fn (args: anytype) OverloadedFnReturnTy
                     }
                     for (single_arg_functions) |func_idx| {
                         const func_ti = @typeInfo(@TypeOf(functions[func_idx])).Fn;
-                        if (isConvertableTo(ArgsType, func_ti.params[0].type.?)) {
+                        if (isConvertibleTo(ArgsType, func_ti.params[0].type.?)) {
                             break :is_single_block .{ functions[func_idx], .single };
                         }
                     }
@@ -125,7 +125,7 @@ pub fn make(comptime functions: anytype) fn (args: anytype) OverloadedFnReturnTy
                                     args_ti.Struct.fields,
                                     func_ti.params,
                                 ) |arg_field, func_param| {
-                                    if (!isConvertableTo(arg_field.type, func_param.type.?)) {
+                                    if (!isConvertibleTo(arg_field.type, func_param.type.?)) {
                                         continue :multi_arg_function_loop;
                                     }
                                 }
@@ -143,7 +143,7 @@ pub fn make(comptime functions: anytype) fn (args: anytype) OverloadedFnReturnTy
                     .multiple => return @call(.auto, func, args),
                 }
             }
-        }.overloadedfn;
+        }.overloadedFn;
     }
 }
 
@@ -174,13 +174,14 @@ fn OverloadedFnReturnType(comptime functions: anytype) type {
     };
 }
 
-fn isConvertableTo(comptime From: type, comptime To: type) bool {
-    comptime {
-        if (From == To) return true;
+pub fn isConvertibleTo(comptime From: type, comptime To: type) bool {
+    return comptime return_block: {
+        if (From == To) break :return_block true;
         const from_type_info = @typeInfo(From);
         const to_type_info = @typeInfo(To);
-        return switch (to_type_info) {
-            .ComptimeInt, .ComptimeFloat => unreachable, // this should be handled above From == To
+        break :return_block switch (to_type_info) {
+            .Optional => |to| isConvertibleTo(From, to.child),
+            .ComptimeInt, .ComptimeFloat => To == From, // this should be handled above From == To
             .Int => |to| switch (from_type_info) {
                 .Int => |from| from.bits == to.bits and
                     from.signedness == to.signedness,
@@ -192,7 +193,50 @@ fn isConvertableTo(comptime From: type, comptime To: type) bool {
                 .ComptimeFloat => true,
                 else => false,
             },
+            .Pointer => |to| switch (from_type_info) {
+                .Array => |from| {
+                    // from.
+                    if (!isConvertibleTo(from.child, to.child)) break :return_block false;
+                    break :return_block true;
+                },
+                .Pointer => |from| {
+                    if (to.alignment != from.alignment) break :return_block false;
+
+                    // // is_allowzero is for [*c] pointers
+                    // // if TO is a [*c] pointer make sure from is one too
+                    // if (to.is_allowzero and !from.is_allowzero) break :return_block false;
+
+                    // if FROM is const, make sure TO is const
+                    if (from.is_const and !to.is_const) break :return_block false;
+
+                    // if TO is expected to be volatile make sure FROM is volatile
+                    if (to.is_volatile and !from.is_volatile) break :return_block false;
+
+                    // if (to.sentinel) |s| {
+                    // if (from.sentinel) |s2| {
+                    //     // @ptrCast(value: anytype)
+                    // }
+                    // }
+
+                    if (to.address_space != from.address_space) break :return_block false;
+
+                    if (to.size == .C) {}
+
+                    // if pointer to array
+                    if (@typeInfo(from.child) == .Array) {
+                        if (!isConvertibleTo(from.child, To)) break :return_block false;
+                    } else {
+                        if (!isConvertibleTo(from.child, to.child)) break :return_block false;
+                    }
+
+                    break :return_block true;
+                },
+                else => false,
+            },
+            // .Array => |to| switch (from_type_info) {
+            //     .Array => |from| from.
+            // },
             else => false,
         };
-    }
+    };
 }

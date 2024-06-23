@@ -22,8 +22,9 @@ const Rect2 = struct {
         initRect2_0, // void
         initRect2_1, // from: Rect2
         initRect2_2, // from: Rect2i
-        initRect2_3, // postition: Vec2, size: Vec2
+        initRect2_3, // position: Vec2, size: Vec2
         initRect2_4, // x: f32, y: f32, w: f32, h: f32
+        initRect5,
     });
 
     pub fn print(self: @This()) void {
@@ -65,6 +66,16 @@ fn initRect2_4(x: f32, y: f32, w: f32, h: f32) Rect2 {
     };
 }
 
+fn initRect5(s: []const u8) Rect2 {
+    if (s.len < 4) {
+        return .{};
+    }
+    return .{
+        .position = .{ .x = @floatFromInt(s[0]), .y = @floatFromInt(s[1]) },
+        .size = .{ .x = @floatFromInt(s[2]), .y = @floatFromInt(s[3]) },
+    };
+}
+
 pub fn main() !void {
     const some_rect2 = Rect2{
         .position = .{ .x = 0.0, .y = 1.0 },
@@ -81,4 +92,22 @@ pub fn main() !void {
     Rect2.init(some_rect2i).print(); // calling init with rect2i
     Rect2.init(.{ some_vec2a, some_vec2b }).print(); // calling init with Vec2, Vec2
     Rect2.init(.{ 12.0, 13.0, 14.0, 15.0 }).print(); // calling init with f32s, f32s, f32s, f32s
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    const allocator = gpa.allocator();
+    const str = try std.fmt.allocPrint(allocator, "\x04\x03\x02\x01", .{});
+    defer allocator.free(str);
+
+    Rect2.init(str).print();
+    Rect2.init("test").print();
+    // const C = struct {
+    //     a: u32 = 0,
+    // };
+    const ExternC = extern struct {
+        a: u32 = 0,
+    };
+    const ptr: [*c]const ExternC = &.{};
+
+    std.debug.print("{any}\n", .{@typeInfo(@TypeOf(ptr))});
+
+    // Rect2.init(@constCast("test")).print();
 }
