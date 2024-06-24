@@ -64,6 +64,7 @@ pub fn make(comptime functions: anytype) fn (args: anytype) OverloadedFnReturnTy
         // Check for inconsistent function return types, make sure the tuple only has functions,
         // and set these function lists
         var void_function: ?usize = null;
+        var void_arg_function: ?usize = null;
         var single_arg_functions: []const usize = &.{};
         var multi_arg_functions: []const usize = &.{};
         for (function_entries, 0..) |entry, i| {
@@ -75,7 +76,11 @@ pub fn make(comptime functions: anytype) fn (args: anytype) OverloadedFnReturnTy
 
                     switch (func.params.len) {
                         0 => void_function = i,
-                        1 => single_arg_functions = single_arg_functions ++ .{i},
+                        1 => if (func.params[0].type == void) {
+                            void_arg_function = i;
+                        } else {
+                            single_arg_functions = single_arg_functions ++ .{i};
+                        },
                         else => multi_arg_functions = multi_arg_functions ++ .{i},
                     }
                 },
@@ -110,6 +115,7 @@ pub fn make(comptime functions: anytype) fn (args: anytype) OverloadedFnReturnTy
                         }
                         @compileError("no zero argument function overload");
                     }
+
                     for (single_arg_functions) |func_idx| {
                         const func_ti = @typeInfo(@TypeOf(functions[func_idx])).Fn;
                         if (isConvertibleTo(ArgsType, func_ti.params[0].type.?)) {
@@ -131,6 +137,14 @@ pub fn make(comptime functions: anytype) fn (args: anytype) OverloadedFnReturnTy
                                 }
                                 break :is_single_block .{ functions[func_idx], .multiple };
                             }
+                        }
+                    }
+
+                    // special case for if function takes in void as argument
+                    if (void_arg_function != null and args_ti == .Struct and args_ti.Struct.is_tuple) {
+                        const args_struct = args_ti.Struct;
+                        if (args_struct.fields.len == 1 and args_struct.fields[0].type == void) {
+                            break :is_single_block .{ functions[void_arg_function.?], .multiple };
                         }
                     }
 
