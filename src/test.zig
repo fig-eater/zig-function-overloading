@@ -3,7 +3,62 @@
 
 const std = @import("std");
 const testing = std.testing;
-const isConvertibleTo = @import("overloading.zig").isConvertibleTo;
+const overloading = @import("overloading.zig");
+const isConvertibleTo = overloading.isConvertibleTo;
+
+test "general 1" {
+    const overloaded = struct {
+        fn foo_0() u32 {
+            return 0.0;
+        }
+
+        fn foo_1(a: u32) u32 {
+            return a;
+        }
+
+        fn foo_2(a: f32) u32 {
+            return @intFromFloat(a);
+        }
+
+        fn foo_3(a: u32, b: u32) u32 {
+            return a + b;
+        }
+
+        fn foo_4(a: []const u8) u32 {
+            var total: u32 = 0;
+            for (a) |i| total += i;
+            return @intCast(total);
+        }
+
+        fn foo_5(_: void) u32 {
+            return 555;
+        }
+
+        const overloaded = overloading.make(.{
+            foo_0,
+            foo_1,
+            foo_2,
+            foo_3,
+            foo_4,
+            foo_5,
+        });
+    }.overloaded;
+
+    const u32_2: u32 = 2;
+    const f32_2: f32 = 2.0;
+    const str_slice_3: []const u8 = "\x03";
+
+    try testing.expect(overloaded({}) == 0);
+    try testing.expect(overloaded(u32_2) == 2);
+    try testing.expect(overloaded(2) == 2);
+    try testing.expect(overloaded(f32_2) == 2);
+    try testing.expect(overloaded(1.0) == 1);
+    try testing.expect(overloaded(.{ 1, 2 }) == 3);
+    try testing.expect(overloaded(.{ u32_2, u32_2 }) == 4);
+    try testing.expect(overloaded(str_slice_3) == 3);
+    try testing.expect(overloaded(&[_]u8{ 10, 20, 30 }) == 60);
+    try testing.expect(overloaded(.{{}}) == 555);
+}
 
 test "isConvertibleTo type" {
     try testing.expect(isConvertibleTo(type, type));
@@ -212,15 +267,19 @@ test "isConvertibleTo pointer" { // writing these and getting it working makes m
     try testing.expect(!isConvertibleTo([*]u32, ?*u32));
     try testing.expect(!isConvertibleTo([]u32, ?*u32));
     // to c pointer
+    try testing.expect(isConvertibleTo(*[2]u32, [*c]u32));
     try testing.expect(isConvertibleTo(*u32, [*c]u32));
     try testing.expect(isConvertibleTo(?*u32, [*c]u32));
     // to pointer to many
     try testing.expect(isConvertibleTo([*:0]u32, [*]u32));
     try testing.expect(!isConvertibleTo(*u32, [*]u32));
+    try testing.expect(isConvertibleTo(*[2]u32, [*]u32));
     // to slice
+    try testing.expect(isConvertibleTo(*[2]u32, []u32));
+    try testing.expect(isConvertibleTo(*[2:0]u32, [:0]u32));
     try testing.expect(isConvertibleTo([:0]u32, []u32));
+    try testing.expect(!isConvertibleTo(*[2]u32, [:0]u32));
     try testing.expect(!isConvertibleTo(*u32, []u32));
-    try testing.expect(!isConvertibleTo(*[2]u32, []u32));
     // to sentinel terminated slice
     try testing.expect(isConvertibleTo([:0]u32, [:0]u32));
     try testing.expect(isConvertibleTo([:0]u32, [:0]const u32));
@@ -230,7 +289,6 @@ test "isConvertibleTo pointer" { // writing these and getting it working makes m
     try testing.expect(!isConvertibleTo([]u32, [:0]u32));
     try testing.expect(!isConvertibleTo([*:0]u32, [:0]u32));
     try testing.expect(!isConvertibleTo(*u32, [:0]u32));
-
     // to sentinel terminated pointers
     try testing.expect(isConvertibleTo([*:0]u32, [*:0]u32));
     try testing.expect(!isConvertibleTo([*]u32, [*:0]u32));

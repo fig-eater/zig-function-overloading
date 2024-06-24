@@ -202,12 +202,12 @@ pub fn isConvertibleTo(comptime From: type, comptime To: type) bool {
                 .ComptimeFloat => true,
                 else => false,
             },
-            .Pointer => |to| switch (from_type_info) {
-                .Array => |from| {
-                    // from.
-                    if (!isConvertibleTo(from.child, to.child)) break :return_block false;
-                    break :return_block true;
-                },
+            .Pointer => |_| switch (from_type_info) {
+                // BAD BAD BAD
+                // .Array => |from| {
+                //     if (!isConvertibleTo(from.child, to.child)) break :return_block false;
+                //     break :return_block true;
+                // },
                 .Pointer => isPointerConvertibleTo(From, To, true, false),
                 .Optional => |from| if (@typeInfo(from.child) == .Pointer)
                     isPointerConvertibleTo(from.child, To, false, true)
@@ -235,6 +235,10 @@ fn isPointerConvertibleTo(
         const from = @typeInfo(From).Pointer;
         const to = @typeInfo(To).Pointer;
 
+        const from_child_type_info = @typeInfo(from.child);
+        const from_array_ptr_to_slice = from_child_type_info == .Array and
+            isConvertibleTo(from_child_type_info.Array.child, to.child);
+
         // if FROM is const, make sure TO is const
         if (from.is_const and !to.is_const) break :return_block false;
 
@@ -243,6 +247,7 @@ fn isPointerConvertibleTo(
 
         // make sure alignment matches
         if (to.alignment != from.alignment) break :return_block false;
+
         // make sure address space matches
         if (to.address_space != from.address_space) break :return_block false;
 
@@ -254,7 +259,11 @@ fn isPointerConvertibleTo(
         // make sure from has a matching sentinel
         // otherwise, they are not convertible
         if (to.sentinel) |to_sentinel| {
-            if (from.sentinel) |from_sentinel| {
+            if (if (from_array_ptr_to_slice)
+                from_child_type_info.Array.sentinel
+            else
+                from.sentinel) |from_sentinel|
+            {
                 if (!@import("std").mem.eql(
                     to.child,
                     @as(*const to.child, @ptrCast(@alignCast(from_sentinel)))[0..1],
@@ -263,52 +272,50 @@ fn isPointerConvertibleTo(
             } else break :return_block false;
         }
 
-        if (only_allow_to_c_ptr) {
-            if (to.size != .C) break :return_block false;
-            switch (from.size) {
-                .One => {},
-                .Many => {},
-                .Slice => break :return_block false,
-                .C => {},
-            }
-        } else if (!switch (from.size) {
-            .One => switch (to.size) {
-                .One => true,
-                .Many => false,
-                .Slice => false,
-                .C => true,
-            },
-            .Many => switch (to.size) {
-                .One => false,
-                .Many => true,
-                .Slice => false,
-                .C => true,
-            },
-            .Slice => switch (to.size) {
-                .One => false,
-                // slice to many is only convertible they both have matching
-                // sentinels. the matching sentinel check is done above. so if
-                // to has a sentinel then from has a matching sentinel.
-                .Many => to.sentinel != null,
-                .Slice => true,
-                .C => false,
-            },
-            .C => switch (to.size) {
-                // although C pointers ARE convertible to single pointers and
-                // many pointers,
-                // if they are null, they will cause an error when converting
-                // so we won't allow this by default, only when check_allowzero_match is false.
-                .One => !check_allowzero_match,
-                .Many => !check_allowzero_match,
-                .Slice => false,
-                .C => true,
-            },
-        }) break :return_block false;
+        if (!from_array_ptr_to_slice) {
+            if (only_allow_to_c_ptr) {
+                if (to.size != .C) break :return_block false;
+                switch (from.size) {
+                    .One => {},
+                    .Many => {},
+                    .Slice => break :return_block false,
+                    .C => {},
+                }
+            } else if (!switch (from.size) {
+                .One => switch (to.size) {
+                    .One => true,
+                    .Many => false,
+                    .Slice => false,
+                    .C => true,
+                },
+                .Many => switch (to.size) {
+                    .One => false,
+                    .Many => true,
+                    .Slice => false,
+                    .C => true,
+                },
+                .Slice => switch (to.size) {
+                    .One => false,
+                    // slice to many is only convertible they both have matching
+                    // sentinels. the matching sentinel check is done above. so if
+                    // to has a sentinel then from has a matching sentinel.
+                    .Many => to.sentinel != null,
+                    .Slice => true,
+                    .C => false,
+                },
+                .C => switch (to.size) {
+                    // although C pointers ARE convertible to single pointers and
+                    // many pointers,
+                    // if they are null, they will cause an error when converting
+                    // so we won't allow this by default, only when check_allowzero_match is false.
+                    .One => !check_allowzero_match,
+                    .Many => !check_allowzero_match,
+                    .Slice => false,
+                    .C => true,
+                },
+            }) break :return_block false;
 
-        // if pointer to array
-        if (@typeInfo(from.child) == .Array) {
-            if (!isConvertibleTo(from.child, To)) break :return_block false;
-        } else {
+            // if pointer to array
             if (!isConvertibleTo(from.child, to.child)) break :return_block false;
         }
 
