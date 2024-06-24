@@ -5,109 +5,78 @@
 // See included LICENSE file or https://unlicense.org
 // Attribution is appreciated but not required.
 
-// Example where we make a init function for the Rect2 Struct
-// that acts like an explicitly overloaded function.
-
 const std = @import("std");
 const overloading = @import("overloading");
 
-const Vec2 = struct { x: f32 = 0.0, y: f32 = 0.0 };
-const Vec2i = struct { x: i32 = 0, y: i32 = 0 };
-const Rect2i = struct { position: Vec2i = .{}, size: Vec2i = .{} };
-const Rect2 = struct {
-    position: Vec2 = .{},
-    size: Vec2 = .{},
-
-    const init = overloading.make(.{
-        initRect2_0, // void
-        initRect2_1, // from: Rect2
-        initRect2_2, // from: Rect2i
-        initRect2_3, // position: Vec2, size: Vec2
-        initRect2_4, // x: f32, y: f32, w: f32, h: f32
-        initRect5,
-    });
-
-    pub fn print(self: @This()) void {
-        std.debug.print("position: ({d},{d})    width:{d} height:{d}\n", .{
-            self.position.x,
-            self.position.y,
-            self.size.x,
-            self.size.y,
-        });
-    }
-};
-
-fn initRect2_0() Rect2 {
-    return .{};
+fn addNoArgs() u32 {
+    return 0;
+}
+fn addU32(a: u32) u32 {
+    return a;
+}
+fn addU8Slice(as: []const u8) u32 {
+    var total: u32 = 0;
+    for (as) |a| total +|= a;
+    return total;
+}
+fn addOptionalU32(a: ?u32) u32 {
+    return if (a) |a_val| return a_val else 0;
+}
+fn addPtrU32(a_ptr: *u32) u32 {
+    return a_ptr.*;
+}
+fn addU32I32(a: u32, b: i32) u32 {
+    return a + @as(u32, @intCast(b));
 }
 
-fn initRect2_1(from: Rect2) Rect2 {
-    return .{ .position = from.position, .size = from.size };
+fn printNoArgs() void {
+    std.debug.print("no args\n", .{});
+}
+fn printVoid(_: void) void {
+    std.debug.print("void\n", .{});
+}
+fn printU32(a: u32) void {
+    std.debug.print("{d}\n", .{a});
+}
+fn printU8Slice(a: []const u8) void {
+    std.debug.print("{s}\n", .{a});
+}
+fn printU32U32(a: u32, b: u32) void {
+    std.debug.print("{d} {d}\n", .{ a, b });
 }
 
-fn initRect2_2(from: Rect2i) Rect2 {
-    return .{
-        .position = .{ .x = @floatFromInt(from.position.x), .y = @floatFromInt(from.position.y) },
-        .size = .{ .x = @floatFromInt(from.size.x), .y = @floatFromInt(from.size.y) },
-    };
-}
+const myAdd = overloading.make(.{
+    addNoArgs,
+    addU32,
+    addU8Slice,
+    addOptionalU32,
+    addPtrU32,
+    addU32I32,
+});
 
-fn initRect2_3(position: Vec2, size: Vec2) Rect2 {
-    return .{
-        .position = position,
-        .size = size,
-    };
-}
+const myPrint = overloading.make(.{
+    printNoArgs,
+    printVoid,
+    printU32,
+    printU8Slice,
+    printU32U32,
+});
 
-fn initRect2_4(x: f32, y: f32, w: f32, h: f32) Rect2 {
-    return .{
-        .position = .{ .x = x, .y = y },
-        .size = .{ .x = w, .y = h },
-    };
-}
+pub fn main() void {
+    const optional_with_val: ?u32 = 555;
+    const optional_with_null: ?u32 = null;
+    var a: u32 = 5;
+    _ = myAdd({}); // returns 0
+    _ = myAdd(2); // returns 2
+    _ = myAdd("abc"); // returns 294
+    _ = myAdd(optional_with_val); // returns 555
+    _ = myAdd(optional_with_null); // returns 0
+    _ = myAdd(&a); // returns 5
+    _ = myAdd(.{ 5, 20 }); // returns 25
 
-fn initRect5(s: []const u8) Rect2 {
-    if (s.len < 4) {
-        return .{};
-    }
-    return .{
-        .position = .{ .x = @floatFromInt(s[0]), .y = @floatFromInt(s[1]) },
-        .size = .{ .x = @floatFromInt(s[2]), .y = @floatFromInt(s[3]) },
-    };
-}
-
-pub fn main() !void {
-    const some_rect2 = Rect2{
-        .position = .{ .x = 0.0, .y = 1.0 },
-        .size = .{ .x = 2.0, .y = 3.0 },
-    };
-    const some_rect2i = Rect2i{
-        .position = .{ .x = 4, .y = 5 },
-        .size = .{ .x = 6, .y = 7 },
-    };
-    const some_vec2a = Vec2{ .x = 8, .y = 9 };
-    const some_vec2b = Vec2{ .x = 8, .y = 9 };
-    Rect2.init({}).print(); // calling init with no args
-    Rect2.init(some_rect2).print(); // calling init with rect2
-    Rect2.init(some_rect2i).print(); // calling init with rect2i
-    Rect2.init(.{ some_vec2a, some_vec2b }).print(); // calling init with Vec2, Vec2
-    Rect2.init(.{ 12.0, 13.0, 14.0, 15.0 }).print(); // calling init with f32s, f32s, f32s, f32s
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    const allocator = gpa.allocator();
-    const str = try std.fmt.allocPrint(allocator, "\x04\x03\x02\x01", .{});
-    defer allocator.free(str);
-
-    Rect2.init(str).print();
-    Rect2.init("test").print();
-    // const C = struct {
-    //     a: u32 = 0,
-    // };
-    const ExternC = extern struct {
-        a: u32 = 0,
-    };
-    const ptr: [*c]const ExternC = &.{};
-
-    std.debug.print("{any}\n", .{@typeInfo(@TypeOf(ptr))});
-
-    // Rect2.init(@constCast("test")).print();
+    myPrint({}); // prints "no args"
+    myPrint(.{{}}); // prints "void"
+    myPrint(2); // prints "2"
+    myPrint("hello"); // prints "hello"
+    myPrint(.{ 3, 4 }); // prints "3 4"
 }

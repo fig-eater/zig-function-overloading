@@ -1,6 +1,6 @@
 .{
     .name = "overloading",
-    .version = "1.0.2",
+    .version = "1.0.3",
     .minimum_zig_version = "0.13.0",
     .dependencies = .{},
     .paths = .{
