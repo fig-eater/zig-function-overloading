@@ -48,10 +48,12 @@ called will call a function in the tuple with corresponding argument types.
 - Functions in the tuple cannot have the same arguments as others in the tuple.
 - If a function takes no arguments, pass `{}` into the overloaded function to call it.
 - If a function takes multiple arguments pass the arguments in a tuple.
+- If a function takes void as it's only argument pass in `.{{}}` into the overloaded function to call it
 
 Example:
 ```zig
 const overloading = @import("overloading");
+
 fn add0() i32 {
     return 0;
 }
@@ -64,17 +66,24 @@ fn add2(a: i32, b: i32) i32 {
 fn add3(a: i32, b: i32, c: i32) i32 {
     return a + b + c;
 }
+fn add4(_:void) i32 {
+    return 123;
+}
+
 // create the overloaded add function
 const add = overloading.make(.{
     add0,
     add1,
     add2,
     add3,
+    add4,
 });
+
 // add({})             returns 0
 // add(3)              returns 3
 // add(.{50, 2})       returns 52
 // add(.{100, 20, 20}) returns 140
+// add(.{{}})          returns 123 // special case for functions which take in void
 ```
 See [example.zig](src/example.zig) for another example.
 

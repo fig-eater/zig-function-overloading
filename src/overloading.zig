@@ -5,7 +5,7 @@
 // See included LICENSE file or https://unlicense.org
 // Attribution is appreciated but not required.
 
-/// Explict Function Overloading for Zig
+/// Explicit Function Overloading for Zig
 ///
 /// Usage:
 ///
@@ -17,6 +17,8 @@
 /// Functions in the tuple cannot have the same arguments as others in the tuple.
 /// If a function takes no arguments, pass `{}` into the overloaded function to call it.
 /// If a function takes multiple arguments pass the arguments in a tuple.
+/// If a function takes void as it's only argument pass in `.{{}}` into the overloaded function to
+/// call it
 ///
 /// Example:
 ///
@@ -34,6 +36,9 @@
 ///     fn add3(a: i32, b: i32, c: i32) i32 {
 ///         return a + b + c;
 ///     }
+///     fn add4(_:void) i32 {
+///         return 123;
+///     }
 ///
 ///     // create the overloaded add function
 ///     const add = overloading.make(.{
@@ -41,45 +46,52 @@
 ///         add1,
 ///         add2,
 ///         add3,
+///         add4,
 ///     });
 ///
 ///     // add({})             returns 0
 ///     // add(3)              returns 3
 ///     // add(.{50, 2})       returns 52
 ///     // add(.{100, 20, 20}) returns 140
+///     // add(.{{}})          returns 123 // special case for functions which take in void
 pub fn make(comptime functions: anytype) fn (args: anytype) OverloadedFnReturnType(functions) {
     comptime {
         const ReturnType = OverloadedFnReturnType(functions);
 
-        // get function entries from the functions touple
+        // get function entries from the functions tuple
         const function_entries = functions_fields: {
             switch (@typeInfo(@TypeOf(functions))) {
                 .Struct => |s| if (s.is_tuple) break :functions_fields s.fields,
                 else => {},
             }
-            @compileError("Expected `functions` to be touple found " ++
+            @compileError("Expected `functions` to be tuple found " ++
                 @typeName(@TypeOf(functions)));
         };
 
-        // Check for inconsistant function return types, make sure the touple only has functions,
+        // Check for inconsistent function return types, make sure the tuple only has functions,
         // and set these function lists
         var void_function: ?usize = null;
+        var void_arg_function: ?usize = null;
         var single_arg_functions: []const usize = &.{};
         var multi_arg_functions: []const usize = &.{};
         for (function_entries, 0..) |entry, i| {
             switch (@typeInfo(entry.type)) {
                 .Fn => |func| {
                     if (func.return_type != ReturnType)
-                        @compileError("inconsistant function return types, expected " ++
+                        @compileError("inconsistent function return types, expected " ++
                             @typeName(ReturnType) ++ " found " ++ @typeName(func.return_type));
 
                     switch (func.params.len) {
                         0 => void_function = i,
-                        1 => single_arg_functions = single_arg_functions ++ .{i},
+                        1 => if (func.params[0].type == void) {
+                            void_arg_function = i;
+                        } else {
+                            single_arg_functions = single_arg_functions ++ .{i};
+                        },
                         else => multi_arg_functions = multi_arg_functions ++ .{i},
                     }
                 },
-                else => @compileError("Expected `functions` to be touple of functions, found " ++
+                else => @compileError("Expected `functions` to be tuple of functions, found " ++
                     @typeName(entry.type)),
             }
         }
@@ -100,7 +112,7 @@ pub fn make(comptime functions: anytype) fn (args: anytype) OverloadedFnReturnTy
         const MatchingFunctionType = enum { none, single, multiple };
 
         return struct {
-            fn overloadedfn(args: anytype) ReturnType {
+            fn overloadedFn(args: anytype) ReturnType {
                 const func, const matching_type: MatchingFunctionType = comptime is_single_block: {
                     const ArgsType = @TypeOf(args);
                     const args_ti = @typeInfo(ArgsType);
@@ -110,9 +122,10 @@ pub fn make(comptime functions: anytype) fn (args: anytype) OverloadedFnReturnTy
                         }
                         @compileError("no zero argument function overload");
                     }
+
                     for (single_arg_functions) |func_idx| {
                         const func_ti = @typeInfo(@TypeOf(functions[func_idx])).Fn;
-                        if (isConvertableTo(ArgsType, func_ti.params[0].type.?)) {
+                        if (isConvertibleTo(ArgsType, func_ti.params[0].type.?)) {
                             break :is_single_block .{ functions[func_idx], .single };
                         }
                     }
@@ -125,12 +138,20 @@ pub fn make(comptime functions: anytype) fn (args: anytype) OverloadedFnReturnTy
                                     args_ti.Struct.fields,
                                     func_ti.params,
                                 ) |arg_field, func_param| {
-                                    if (!isConvertableTo(arg_field.type, func_param.type.?)) {
+                                    if (!isConvertibleTo(arg_field.type, func_param.type.?)) {
                                         continue :multi_arg_function_loop;
                                     }
                                 }
                                 break :is_single_block .{ functions[func_idx], .multiple };
                             }
+                        }
+                    }
+
+                    // special case for if function takes in void as argument
+                    if (void_arg_function != null and args_ti == .Struct and args_ti.Struct.is_tuple) {
+                        const args_struct = args_ti.Struct;
+                        if (args_struct.fields.len == 1 and args_struct.fields[0].type == void) {
+                            break :is_single_block .{ functions[void_arg_function.?], .multiple };
                         }
                     }
 
@@ -143,7 +164,7 @@ pub fn make(comptime functions: anytype) fn (args: anytype) OverloadedFnReturnTy
                     .multiple => return @call(.auto, func, args),
                 }
             }
-        }.overloadedfn;
+        }.overloadedFn;
     }
 }
 
@@ -174,13 +195,23 @@ fn OverloadedFnReturnType(comptime functions: anytype) type {
     };
 }
 
-fn isConvertableTo(comptime From: type, comptime To: type) bool {
-    comptime {
-        if (From == To) return true;
+pub fn isConvertibleTo(comptime From: type, comptime To: type) bool {
+    return comptime return_block: {
+        if (From == To) break :return_block true;
         const from_type_info = @typeInfo(From);
         const to_type_info = @typeInfo(To);
-        return switch (to_type_info) {
-            .ComptimeInt, .ComptimeFloat => unreachable, // this should be handled above From == To
+
+        break :return_block switch (to_type_info) {
+            .Optional => |to| {
+                if (isConvertibleTo(From, to.child)) break :return_block true;
+
+                // check if converting c-pointer to optional pointer
+                if (from_type_info == .Pointer and from_type_info.Pointer.is_allowzero) {
+                    break :return_block isPointerConvertibleTo(From, to.child, false, false);
+                }
+                break :return_block false;
+            },
+            .ComptimeInt, .ComptimeFloat => To == From, // this should be handled above From == To
             .Int => |to| switch (from_type_info) {
                 .Int => |from| from.bits == to.bits and
                     from.signedness == to.signedness,
@@ -192,7 +223,123 @@ fn isConvertableTo(comptime From: type, comptime To: type) bool {
                 .ComptimeFloat => true,
                 else => false,
             },
+            .Pointer => |_| switch (from_type_info) {
+                // BAD BAD BAD
+                // .Array => |from| {
+                //     if (!isConvertibleTo(from.child, to.child)) break :return_block false;
+                //     break :return_block true;
+                // },
+                .Pointer => isPointerConvertibleTo(From, To, true, false),
+                .Optional => |from| if (@typeInfo(from.child) == .Pointer)
+                    isPointerConvertibleTo(from.child, To, false, true)
+                else
+                    false,
+                else => false,
+            },
+            // .Array => |to| switch (from_type_info) {
+            //     .Array => |from| from.
+            // },
+            .ErrorUnion => |to| isConvertibleTo(From, to.error_set) or
+                isConvertibleTo(From, to.payload),
             else => false,
         };
-    }
+    };
+}
+
+fn isPointerConvertibleTo(
+    comptime From: type,
+    comptime To: type,
+    comptime check_allowzero_match: bool,
+    comptime only_allow_to_c_ptr: bool,
+) bool {
+    return comptime return_block: {
+        const from = @typeInfo(From).Pointer;
+        const to = @typeInfo(To).Pointer;
+
+        const from_child_type_info = @typeInfo(from.child);
+        const from_array_ptr_to_slice = from_child_type_info == .Array and
+            isConvertibleTo(from_child_type_info.Array.child, to.child);
+
+        // if FROM is const, make sure TO is const
+        if (from.is_const and !to.is_const) break :return_block false;
+
+        // if TO is expected to be volatile make sure FROM is volatile
+        if (to.is_volatile and !from.is_volatile) break :return_block false;
+
+        // make sure alignment matches
+        if (to.alignment != from.alignment) break :return_block false;
+
+        // make sure address space matches
+        if (to.address_space != from.address_space) break :return_block false;
+
+        // if FROM can allow zero, make sure TO can allow zero
+        if (check_allowzero_match and (from.is_allowzero and !to.is_allowzero))
+            break :return_block false;
+
+        // if assigning to a pointer with a sentinel
+        // make sure from has a matching sentinel
+        // otherwise, they are not convertible
+        if (to.sentinel) |to_sentinel| {
+            if (if (from_array_ptr_to_slice)
+                from_child_type_info.Array.sentinel
+            else
+                from.sentinel) |from_sentinel|
+            {
+                if (!@import("std").mem.eql(
+                    to.child,
+                    @as(*const to.child, @ptrCast(@alignCast(from_sentinel)))[0..1],
+                    @as(*const to.child, @ptrCast(@alignCast(to_sentinel)))[0..1],
+                )) break :return_block false;
+            } else break :return_block false;
+        }
+
+        if (!from_array_ptr_to_slice) {
+            if (only_allow_to_c_ptr) {
+                if (to.size != .C) break :return_block false;
+                switch (from.size) {
+                    .One => {},
+                    .Many => {},
+                    .Slice => break :return_block false,
+                    .C => {},
+                }
+            } else if (!switch (from.size) {
+                .One => switch (to.size) {
+                    .One => true,
+                    .Many => false,
+                    .Slice => false,
+                    .C => true,
+                },
+                .Many => switch (to.size) {
+                    .One => false,
+                    .Many => true,
+                    .Slice => false,
+                    .C => true,
+                },
+                .Slice => switch (to.size) {
+                    .One => false,
+                    // slice to many is only convertible they both have matching
+                    // sentinels. the matching sentinel check is done above. so if
+                    // to has a sentinel then from has a matching sentinel.
+                    .Many => to.sentinel != null,
+                    .Slice => true,
+                    .C => false,
+                },
+                .C => switch (to.size) {
+                    // although C pointers ARE convertible to single pointers and
+                    // many pointers,
+                    // if they are null, they will cause an error when converting
+                    // so we won't allow this by default, only when check_allowzero_match is false.
+                    .One => !check_allowzero_match,
+                    .Many => !check_allowzero_match,
+                    .Slice => false,
+                    .C => true,
+                },
+            }) break :return_block false;
+
+            // if pointer to array
+            if (!isConvertibleTo(from.child, to.child)) break :return_block false;
+        }
+
+        break :return_block true;
+    };
 }
