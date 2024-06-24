@@ -173,7 +173,7 @@ test "isConvertibleTo float" {
     try testing.expect(!isConvertibleTo(@TypeOf(enum { val }.val), f32));
 }
 
-test "isConvertibleTo pointer" {
+test "isConvertibleTo pointer" { // writing these and getting it working makes me cry
     try testing.expect(!isConvertibleTo(?*u32, *u32));
     try testing.expect(!isConvertibleTo(**u32, *u32));
     try testing.expect(!isConvertibleTo([*]*u32, *u32));
@@ -237,202 +237,505 @@ test "isConvertibleTo pointer" {
     try testing.expect(!isConvertibleTo(*u32, [*:0]u32));
 }
 
-test "isConvertibleTo array" {}
+test "isConvertibleTo array" {
+    const ex = comptime [2]u32{ 0, 1 };
+    try testing.expect(isConvertibleTo([2]u32, [2]u32));
+    try testing.expect(isConvertibleTo([2]u32, ?[2]u32));
 
-test "isConvertibleTo struct" {}
+    try testing.expect(!isConvertibleTo([2]u32, [3]u32));
+    try testing.expect(!isConvertibleTo([2]u32, [2]u64));
 
-test "isConvertibleTo comptime_float" {}
+    try testing.expect(!isConvertibleTo(?[2]u32, [2]u32));
+    try testing.expect(!isConvertibleTo(*[2]u32, [2]u32));
+    try testing.expect(!isConvertibleTo([*][2]u32, [2]u32));
+    try testing.expect(!isConvertibleTo([*:ex][2]u32, [2]u32));
+    try testing.expect(!isConvertibleTo([*c][2]u32, [2]u32));
+    try testing.expect(!isConvertibleTo([2][2]u32, [2]u32));
 
-test "isConvertibleTo comptime_int" {}
+    try testing.expect(!isConvertibleTo(type, [2]u32));
+    try testing.expect(!isConvertibleTo(void, [2]u32));
+    try testing.expect(!isConvertibleTo(bool, [2]u32));
+    try testing.expect(!isConvertibleTo(noreturn, [2]u32));
+    try testing.expect(!isConvertibleTo(i32, [2]u32));
+    try testing.expect(!isConvertibleTo(u32, [2]u32));
+    try testing.expect(!isConvertibleTo(f32, [2]u32));
+    try testing.expect(!isConvertibleTo(struct {}, [2]u32));
+    try testing.expect(!isConvertibleTo(comptime_float, [2]u32));
+    try testing.expect(!isConvertibleTo(comptime_int, [2]u32));
+    try testing.expect(!isConvertibleTo(@TypeOf(undefined), [2]u32));
+    try testing.expect(!isConvertibleTo(@TypeOf(null), [2]u32));
+    try testing.expect(!isConvertibleTo(anyerror!u32, [2]u32));
+    try testing.expect(!isConvertibleTo(error{}, [2]u32));
+    try testing.expect(!isConvertibleTo(enum {}, [2]u32));
+    try testing.expect(!isConvertibleTo(union {}, [2]u32));
+    try testing.expect(!isConvertibleTo(fn () void, [2]u32));
+    try testing.expect(!isConvertibleTo(anyopaque, [2]u32));
+    try testing.expect(!isConvertibleTo(@Vector(4, i32), [2]u32));
+    try testing.expect(!isConvertibleTo(@TypeOf(enum { val }.val), [2]u32));
+}
 
-test "isConvertibleTo undefined" {}
+test "isConvertibleTo struct" {
+    const Ex = struct {};
+    const ex = comptime Ex{};
 
-test "isConvertibleTo null" {}
+    try testing.expect(isConvertibleTo(Ex, Ex));
+    try testing.expect(isConvertibleTo(Ex, ?Ex));
 
-test "isConvertibleTo optional" {}
+    try testing.expect(!isConvertibleTo(?Ex, Ex));
+    try testing.expect(!isConvertibleTo(*Ex, Ex));
+    try testing.expect(!isConvertibleTo([*]Ex, Ex));
+    try testing.expect(!isConvertibleTo([*:ex]Ex, Ex));
+    try testing.expect(!isConvertibleTo([*c]Ex, Ex));
+    try testing.expect(!isConvertibleTo([2]Ex, Ex));
 
-test "isConvertibleTo error union" {}
+    try testing.expect(!isConvertibleTo(type, Ex));
+    try testing.expect(!isConvertibleTo(void, Ex));
+    try testing.expect(!isConvertibleTo(bool, Ex));
+    try testing.expect(!isConvertibleTo(noreturn, Ex));
+    try testing.expect(!isConvertibleTo(i32, Ex));
+    try testing.expect(!isConvertibleTo(u32, Ex));
+    try testing.expect(!isConvertibleTo(f32, Ex));
+    try testing.expect(!isConvertibleTo(struct {}, Ex));
+    try testing.expect(!isConvertibleTo(comptime_float, Ex));
+    try testing.expect(!isConvertibleTo(comptime_int, Ex));
+    try testing.expect(!isConvertibleTo(@TypeOf(undefined), Ex));
+    try testing.expect(!isConvertibleTo(@TypeOf(null), Ex));
+    try testing.expect(!isConvertibleTo(anyerror!u32, Ex));
+    try testing.expect(!isConvertibleTo(error{}, Ex));
+    try testing.expect(!isConvertibleTo(enum {}, Ex));
+    try testing.expect(!isConvertibleTo(union {}, Ex));
+    try testing.expect(!isConvertibleTo(fn () void, Ex));
+    try testing.expect(!isConvertibleTo(anyopaque, Ex));
+    try testing.expect(!isConvertibleTo(@Vector(4, i32), Ex));
+    try testing.expect(!isConvertibleTo(@TypeOf(enum { val }.val), Ex));
+}
 
-test "isConvertibleTo error set" {}
+test "isConvertibleTo comptime_float" {
+    const ex: comptime_float = 2.0;
 
-test "isConvertibleTo enum" {}
+    try testing.expect(isConvertibleTo(comptime_float, comptime_float));
+    try testing.expect(isConvertibleTo(comptime_float, ?comptime_float));
 
-test "isConvertibleTo union" {}
+    try testing.expect(!isConvertibleTo(?comptime_float, comptime_float));
+    try testing.expect(!isConvertibleTo(*comptime_float, comptime_float));
+    try testing.expect(!isConvertibleTo([*]comptime_float, comptime_float));
+    try testing.expect(!isConvertibleTo([*:ex]comptime_float, comptime_float));
+    try testing.expect(!isConvertibleTo([2]comptime_float, comptime_float));
 
-test "isConvertibleTo fn" {}
+    try testing.expect(!isConvertibleTo(type, comptime_float));
+    try testing.expect(!isConvertibleTo(void, comptime_float));
+    try testing.expect(!isConvertibleTo(bool, comptime_float));
+    try testing.expect(!isConvertibleTo(noreturn, comptime_float));
+    try testing.expect(!isConvertibleTo(i32, comptime_float));
+    try testing.expect(!isConvertibleTo(u32, comptime_float));
+    try testing.expect(!isConvertibleTo(f32, comptime_float));
+    try testing.expect(!isConvertibleTo(struct {}, comptime_float));
+    try testing.expect(!isConvertibleTo(comptime_int, comptime_float));
+    try testing.expect(!isConvertibleTo(@TypeOf(undefined), comptime_float));
+    try testing.expect(!isConvertibleTo(@TypeOf(null), comptime_float));
+    try testing.expect(!isConvertibleTo(anyerror!u32, comptime_float));
+    try testing.expect(!isConvertibleTo(error{}, comptime_float));
+    try testing.expect(!isConvertibleTo(enum {}, comptime_float));
+    try testing.expect(!isConvertibleTo(union {}, comptime_float));
+    try testing.expect(!isConvertibleTo(fn () void, comptime_float));
+    try testing.expect(!isConvertibleTo(anyopaque, comptime_float));
+    try testing.expect(!isConvertibleTo(@Vector(4, i32), comptime_float));
+    try testing.expect(!isConvertibleTo(@TypeOf(enum { val }.val), comptime_float));
+}
 
-test "isConvertibleTo opaque" {}
+test "isConvertibleTo comptime_int" {
+    const ex: comptime_int = 2;
 
-test "isConvertibleTo vector" {}
+    try testing.expect(isConvertibleTo(comptime_int, comptime_int));
+    try testing.expect(isConvertibleTo(comptime_int, ?comptime_int));
 
-test "isConvertibleTo enum literal" {}
+    try testing.expect(!isConvertibleTo(?comptime_int, comptime_int));
+    try testing.expect(!isConvertibleTo(*comptime_int, comptime_int));
+    try testing.expect(!isConvertibleTo([*]comptime_int, comptime_int));
+    try testing.expect(!isConvertibleTo([*:ex]comptime_int, comptime_int));
+    try testing.expect(!isConvertibleTo([2]comptime_int, comptime_int));
 
-// // types should only be convertible to types
+    try testing.expect(!isConvertibleTo(type, comptime_int));
+    try testing.expect(!isConvertibleTo(void, comptime_int));
+    try testing.expect(!isConvertibleTo(bool, comptime_int));
+    try testing.expect(!isConvertibleTo(noreturn, comptime_int));
+    try testing.expect(!isConvertibleTo(i32, comptime_int));
+    try testing.expect(!isConvertibleTo(u32, comptime_int));
+    try testing.expect(!isConvertibleTo(f32, comptime_int));
+    try testing.expect(!isConvertibleTo(struct {}, comptime_int));
+    try testing.expect(!isConvertibleTo(comptime_float, comptime_int));
+    try testing.expect(!isConvertibleTo(@TypeOf(undefined), comptime_int));
+    try testing.expect(!isConvertibleTo(@TypeOf(null), comptime_int));
+    try testing.expect(!isConvertibleTo(anyerror!u32, comptime_int));
+    try testing.expect(!isConvertibleTo(error{}, comptime_int));
+    try testing.expect(!isConvertibleTo(enum {}, comptime_int));
+    try testing.expect(!isConvertibleTo(union {}, comptime_int));
+    try testing.expect(!isConvertibleTo(fn () void, comptime_int));
+    try testing.expect(!isConvertibleTo(anyopaque, comptime_int));
+    try testing.expect(!isConvertibleTo(@Vector(4, i32), comptime_int));
+    try testing.expect(!isConvertibleTo(@TypeOf(enum { val }.val), comptime_int));
+}
 
-// try testing.expect(isConvertibleTo(void, void));
-// try testing.expect(isConvertibleTo(void, ?void));
-// try notConvertible(void, [_]type{
-//     ?void,
+test "isConvertibleTo undefined" {
+    try testing.expect(isConvertibleTo(@TypeOf(undefined), @TypeOf(undefined)));
+    try testing.expect(isConvertibleTo(@TypeOf(undefined), ?@TypeOf(undefined)));
 
-//     type,
-//     bool,
-//     noreturn,
-//     i32,
-//     u32,
-//     f32,
-//     //pointer
-//     *u32,
-//     [*]u32,
-//     [*:0]u32,
-//     [*c]u32,
-//     [2]u32,
-//     struct {},
-//     comptime_float,
-//     comptime_int,
-//     @TypeOf(undefined),
-//     @TypeOf(null),
-//     anyerror!u32,
-//     error{},
-//     union {},
-//     fn () void,
-//     anyopaque,
-//     @Vector(4, i32),
-//     @TypeOf(enum { val }.val),
-// });
+    try testing.expect(!isConvertibleTo(?@TypeOf(undefined), @TypeOf(undefined)));
+    try testing.expect(!isConvertibleTo(*@TypeOf(undefined), @TypeOf(undefined)));
+    try testing.expect(!isConvertibleTo([*]@TypeOf(undefined), @TypeOf(undefined)));
+    try testing.expect(!isConvertibleTo([2]@TypeOf(undefined), @TypeOf(undefined)));
 
-// try testing.expect(isConvertibleTo(bool, bool));
-// try testing.expect(isConvertibleTo(bool, ?bool));
-// try notConvertible(bool, [_]type{
-//     ?bool,
+    try testing.expect(!isConvertibleTo(type, @TypeOf(undefined)));
+    try testing.expect(!isConvertibleTo(void, @TypeOf(undefined)));
+    try testing.expect(!isConvertibleTo(bool, @TypeOf(undefined)));
+    try testing.expect(!isConvertibleTo(noreturn, @TypeOf(undefined)));
+    try testing.expect(!isConvertibleTo(i32, @TypeOf(undefined)));
+    try testing.expect(!isConvertibleTo(u32, @TypeOf(undefined)));
+    try testing.expect(!isConvertibleTo(f32, @TypeOf(undefined)));
+    try testing.expect(!isConvertibleTo(struct {}, @TypeOf(undefined)));
+    try testing.expect(!isConvertibleTo(comptime_float, @TypeOf(undefined)));
+    try testing.expect(!isConvertibleTo(comptime_int, @TypeOf(undefined)));
+    try testing.expect(!isConvertibleTo(@TypeOf(null), @TypeOf(undefined)));
+    try testing.expect(!isConvertibleTo(anyerror!u32, @TypeOf(undefined)));
+    try testing.expect(!isConvertibleTo(error{}, @TypeOf(undefined)));
+    try testing.expect(!isConvertibleTo(enum {}, @TypeOf(undefined)));
+    try testing.expect(!isConvertibleTo(union {}, @TypeOf(undefined)));
+    try testing.expect(!isConvertibleTo(fn () void, @TypeOf(undefined)));
+    try testing.expect(!isConvertibleTo(anyopaque, @TypeOf(undefined)));
+    try testing.expect(!isConvertibleTo(@Vector(4, i32), @TypeOf(undefined)));
+    try testing.expect(!isConvertibleTo(@TypeOf(enum { val }.val), @TypeOf(undefined)));
+}
 
-//     type,
-//     void,
-//     noreturn,
-//     i32,
-//     u32,
-//     f32,
-//     //pointer
-//     *u32,
-//     [*]u32,
-//     [*:0]u32,
-//     [*c]u32,
-//     [2]u32,
-//     struct {},
-//     comptime_float,
-//     comptime_int,
-//     @TypeOf(undefined),
-//     @TypeOf(null),
-//     anyerror!u32,
-//     error{},
-//     union {},
-//     fn () void,
-//     anyopaque,
-//     @Vector(4, i32),
-//     @TypeOf(enum { val }.val),
-// });
+test "isConvertibleTo null" {
+    try testing.expect(isConvertibleTo(@TypeOf(null), @TypeOf(null)));
 
-// // noreturn isn't allowed as a parameter
-// try testing.expect(isConvertibleTo(noreturn, noreturn));
+    try testing.expect(!isConvertibleTo(*@TypeOf(null), @TypeOf(null)));
+    try testing.expect(!isConvertibleTo([*]@TypeOf(null), @TypeOf(null)));
+    try testing.expect(!isConvertibleTo([*:null]@TypeOf(null), @TypeOf(null)));
+    try testing.expect(!isConvertibleTo([2]@TypeOf(null), @TypeOf(null)));
 
-// try testing.expect(isConvertibleTo(i32, i32));
-// try testing.expect(isConvertibleTo(u32, u32));
-// try testing.expect(isConvertibleTo(i32, ?i32));
-// try testing.expect(isConvertibleTo(u32, ?u32));
-// try testing.expect(isConvertibleTo(comptime_int, u32));
-// try testing.expect(isConvertibleTo(comptime_int, ?u32));
-// try notConvertible(i32, [_]type{
-//     ?i32,
-//     i64,
-//     u32,
+    try testing.expect(!isConvertibleTo(type, @TypeOf(null)));
+    try testing.expect(!isConvertibleTo(void, @TypeOf(null)));
+    try testing.expect(!isConvertibleTo(bool, @TypeOf(null)));
+    try testing.expect(!isConvertibleTo(noreturn, @TypeOf(null)));
+    try testing.expect(!isConvertibleTo(i32, @TypeOf(null)));
+    try testing.expect(!isConvertibleTo(u32, @TypeOf(null)));
+    try testing.expect(!isConvertibleTo(f32, @TypeOf(null)));
+    try testing.expect(!isConvertibleTo(struct {}, @TypeOf(null)));
+    try testing.expect(!isConvertibleTo(comptime_float, @TypeOf(null)));
+    try testing.expect(!isConvertibleTo(comptime_int, @TypeOf(null)));
+    try testing.expect(!isConvertibleTo(@TypeOf(undefined), @TypeOf(null)));
+    try testing.expect(!isConvertibleTo(anyerror!u32, @TypeOf(null)));
+    try testing.expect(!isConvertibleTo(error{}, @TypeOf(null)));
+    try testing.expect(!isConvertibleTo(enum {}, @TypeOf(null)));
+    try testing.expect(!isConvertibleTo(union {}, @TypeOf(null)));
+    try testing.expect(!isConvertibleTo(fn () void, @TypeOf(null)));
+    try testing.expect(!isConvertibleTo(anyopaque, @TypeOf(null)));
+    try testing.expect(!isConvertibleTo(@Vector(4, i32), @TypeOf(null)));
+    try testing.expect(!isConvertibleTo(@TypeOf(enum { val }.val), @TypeOf(null)));
+}
 
-//     type,
-//     void,
-//     bool,
-//     noreturn,
-//     f32,
-//     //pointer
-//     *u32,
-//     [*]u32,
-//     [*:0]u32,
-//     [*c]u32,
-//     [2]u32,
-//     struct {},
-//     comptime_float,
-//     @TypeOf(undefined),
-//     @TypeOf(null),
-//     anyerror!u32,
-//     error{},
-//     union {},
-//     fn () void,
-//     anyopaque,
-//     @Vector(4, i32),
-//     @TypeOf(enum { val }.val),
-// });
+test "isConvertibleTo optional" {
+    try testing.expect(isConvertibleTo([*c]u32, ?*u32));
+    try testing.expect(isConvertibleTo(?void, ?void));
 
-// try testing.expect(isConvertibleTo(f32, f32));
-// try testing.expect(isConvertibleTo(f32, ?f32));
-// try testing.expect(isConvertibleTo(comptime_float, ?f32));
-// try testing.expect(isConvertibleTo(comptime_float, ?f32));
-// try notConvertible(f32, [_]type{
-//     ?f32,
-//     f64,
+    try testing.expect(!isConvertibleTo(??void, ?void));
+    try testing.expect(!isConvertibleTo(*?void, ?void));
+    try testing.expect(!isConvertibleTo([*]?void, ?void));
+    try testing.expect(!isConvertibleTo([*:null]?void, ?void));
+    try testing.expect(!isConvertibleTo([2]?void, ?void));
 
-//     type,
-//     void,
-//     bool,
-//     noreturn,
-//     i32,
-//     u32,
-//     //pointer
-//     *u32,
-//     [*]u32,
-//     [*:0]u32,
-//     [*c]u32,
-//     [2]u32,
-//     struct {},
-//     comptime_int,
-//     @TypeOf(undefined),
-//     @TypeOf(null),
-//     anyerror!u32,
-//     error{},
-//     union {},
-//     fn () void,
-//     anyopaque,
-//     @Vector(4, i32),
-//     @TypeOf(enum { val }.val),
-// });
+    try testing.expect(!isConvertibleTo(type, ?void));
+    try testing.expect(!isConvertibleTo(bool, ?void));
+    try testing.expect(!isConvertibleTo(noreturn, ?void));
+    try testing.expect(!isConvertibleTo(i32, ?void));
+    try testing.expect(!isConvertibleTo(u32, ?void));
+    try testing.expect(!isConvertibleTo(f32, ?void));
+    try testing.expect(!isConvertibleTo(struct {}, ?void));
+    try testing.expect(!isConvertibleTo(comptime_float, ?void));
+    try testing.expect(!isConvertibleTo(comptime_int, ?void));
+    try testing.expect(!isConvertibleTo(@TypeOf(undefined), ?void));
+    try testing.expect(!isConvertibleTo(@TypeOf(null), ?void));
+    try testing.expect(!isConvertibleTo(anyerror!u32, ?void));
+    try testing.expect(!isConvertibleTo(error{}, ?void));
+    try testing.expect(!isConvertibleTo(enum {}, ?void));
+    try testing.expect(!isConvertibleTo(union {}, ?void));
+    try testing.expect(!isConvertibleTo(fn () void, ?void));
+    try testing.expect(!isConvertibleTo(anyopaque, ?void));
+    try testing.expect(!isConvertibleTo(@Vector(4, i32), ?void));
+    try testing.expect(!isConvertibleTo(@TypeOf(enum { val }.val), ?void));
+}
 
-// // to pointer
-// try testing.expect(isConvertibleTo(*u32, *u32));
-// try testing.expect(!isConvertibleTo([*]u32, *u32));
-// // to optional pointer
-// try testing.expect(isConvertibleTo(*u32, ?*u32));
-// try testing.expect(isConvertibleTo([*c]u32, ?*u32));
-// // to c pointer
-// try testing.expect(isConvertibleTo(*u32, [*c]u32));
-// try testing.expect(isConvertibleTo(?*u32, [*c]u32));
-// // to pointer to many
-// try testing.expect(isConvertibleTo([*:0]u32, [*]u32));
-// try testing.expect(!isConvertibleTo(*u32, [*]u32));
-// // to slice
-// try testing.expect(isConvertibleTo([:0]u32, []u32));
-// try testing.expect(!isConvertibleTo(*u32, []u32));
-// try testing.expect(!isConvertibleTo(*[2]u32, []u32));
-// // to sentinel terminated slice
-// try testing.expect(isConvertibleTo([:0]u32, [:0]u32));
-// try testing.expect(isConvertibleTo([:0]u32, [:0]const u32));
-// try testing.expect(!isConvertibleTo([:0]const u32, [:0]u32));
-// try testing.expect(!isConvertibleTo([:1]u32, [:0]u32));
-// try testing.expect(!isConvertibleTo(*u32, [:0]u32));
-// try testing.expect(!isConvertibleTo([]u32, [:0]u32));
-// try testing.expect(!isConvertibleTo([*:0]u32, [:0]u32));
-// // try testing.expect(!isConvertibleTo(*u32, [:0]u32));
+test "isConvertibleTo error union" {
+    const ErrorSet = error{err};
+    const Ex = ErrorSet!u32;
 
-// // to sentinel terminated pointers
-// // try testing.expect(isConvertibleTo([*:0]u32, [*:0]u32));
-// // try testing.expect(!isConvertibleTo([*]u32, [*:0]u32));
-// // try testing.expect(!isConvertibleTo(*u32, [*:0]u32));
+    try testing.expect(isConvertibleTo(Ex, Ex));
+    try testing.expect(isConvertibleTo(Ex, ?Ex));
+    try testing.expect(isConvertibleTo(u32, Ex));
+    try testing.expect(isConvertibleTo(comptime_int, Ex));
+    try testing.expect(isConvertibleTo(comptime_float, ErrorSet!f32));
+    try testing.expect(isConvertibleTo(@TypeOf(ErrorSet.err), Ex));
 
-// const a: [:5]const u32 = @ptrCast(&[_]u32{ 2, 3, 5, 6 });
-// const b: [:5]const u32 = a;
-// std.debug.print("{any}\n", .{b});
+    try testing.expect(!isConvertibleTo(?Ex, Ex));
+    try testing.expect(!isConvertibleTo(*Ex, Ex));
+    try testing.expect(!isConvertibleTo([*]Ex, Ex));
+    try testing.expect(!isConvertibleTo([*:2]Ex, Ex));
+    try testing.expect(!isConvertibleTo([2]Ex, Ex));
+
+    try testing.expect(!isConvertibleTo(type, Ex));
+    try testing.expect(!isConvertibleTo(void, Ex));
+    try testing.expect(!isConvertibleTo(bool, Ex));
+    try testing.expect(!isConvertibleTo(noreturn, Ex));
+    try testing.expect(!isConvertibleTo(i64, Ex));
+    try testing.expect(!isConvertibleTo(u64, Ex));
+    try testing.expect(!isConvertibleTo(f32, Ex));
+    try testing.expect(!isConvertibleTo(struct {}, Ex));
+    try testing.expect(!isConvertibleTo(comptime_float, Ex));
+    try testing.expect(!isConvertibleTo(comptime_int, error{}!void));
+    try testing.expect(!isConvertibleTo(@TypeOf(undefined), Ex));
+    try testing.expect(!isConvertibleTo(@TypeOf(null), Ex));
+    try testing.expect(!isConvertibleTo(anyerror!u32, Ex));
+    try testing.expect(!isConvertibleTo(error{}, Ex));
+    try testing.expect(!isConvertibleTo(enum {}, Ex));
+    try testing.expect(!isConvertibleTo(union {}, Ex));
+    try testing.expect(!isConvertibleTo(fn () void, Ex));
+    try testing.expect(!isConvertibleTo(anyopaque, Ex));
+    try testing.expect(!isConvertibleTo(@Vector(4, i32), Ex));
+    try testing.expect(!isConvertibleTo(@TypeOf(enum { val }.val), Ex));
+}
+
+test "isConvertibleTo error set" {
+    const ErrorSet = error{err};
+
+    try testing.expect(isConvertibleTo(ErrorSet, ErrorSet));
+    try testing.expect(isConvertibleTo(ErrorSet, ?ErrorSet));
+
+    try testing.expect(!isConvertibleTo(?ErrorSet, ErrorSet));
+    try testing.expect(!isConvertibleTo(*ErrorSet, ErrorSet));
+    try testing.expect(!isConvertibleTo([*]ErrorSet, ErrorSet));
+    try testing.expect(!isConvertibleTo([2]ErrorSet, ErrorSet));
+
+    try testing.expect(!isConvertibleTo(type, ErrorSet));
+    try testing.expect(!isConvertibleTo(void, ErrorSet));
+    try testing.expect(!isConvertibleTo(bool, ErrorSet));
+    try testing.expect(!isConvertibleTo(noreturn, ErrorSet));
+    try testing.expect(!isConvertibleTo(i32, ErrorSet));
+    try testing.expect(!isConvertibleTo(u32, ErrorSet));
+    try testing.expect(!isConvertibleTo(f32, ErrorSet));
+    try testing.expect(!isConvertibleTo(struct {}, ErrorSet));
+    try testing.expect(!isConvertibleTo(comptime_float, ErrorSet));
+    try testing.expect(!isConvertibleTo(comptime_int, ErrorSet));
+    try testing.expect(!isConvertibleTo(@TypeOf(undefined), ErrorSet));
+    try testing.expect(!isConvertibleTo(@TypeOf(null), ErrorSet));
+    try testing.expect(!isConvertibleTo(anyerror!u32, ErrorSet));
+    try testing.expect(!isConvertibleTo(error{}, ErrorSet));
+    try testing.expect(!isConvertibleTo(enum {}, ErrorSet));
+    try testing.expect(!isConvertibleTo(union {}, ErrorSet));
+    try testing.expect(!isConvertibleTo(fn () void, ErrorSet));
+    try testing.expect(!isConvertibleTo(anyopaque, ErrorSet));
+    try testing.expect(!isConvertibleTo(@Vector(4, i32), ErrorSet));
+    try testing.expect(!isConvertibleTo(@TypeOf(enum { val }.val), ErrorSet));
+}
+
+test "isConvertibleTo enum" {
+    const Ex = enum { a, b, c };
+
+    try testing.expect(isConvertibleTo(Ex, Ex));
+    try testing.expect(isConvertibleTo(Ex, ?Ex));
+
+    try testing.expect(!isConvertibleTo(?Ex, Ex));
+    try testing.expect(!isConvertibleTo(*Ex, Ex));
+    try testing.expect(!isConvertibleTo([*]Ex, Ex));
+    try testing.expect(!isConvertibleTo([*:Ex.a]Ex, Ex));
+    try testing.expect(!isConvertibleTo([2]Ex, Ex));
+
+    try testing.expect(!isConvertibleTo(type, Ex));
+    try testing.expect(!isConvertibleTo(void, Ex));
+    try testing.expect(!isConvertibleTo(bool, Ex));
+    try testing.expect(!isConvertibleTo(noreturn, Ex));
+    try testing.expect(!isConvertibleTo(i32, Ex));
+    try testing.expect(!isConvertibleTo(u32, Ex));
+    try testing.expect(!isConvertibleTo(f32, Ex));
+    try testing.expect(!isConvertibleTo(struct {}, Ex));
+    try testing.expect(!isConvertibleTo(comptime_float, Ex));
+    try testing.expect(!isConvertibleTo(comptime_int, Ex));
+    try testing.expect(!isConvertibleTo(@TypeOf(undefined), Ex));
+    try testing.expect(!isConvertibleTo(@TypeOf(null), Ex));
+    try testing.expect(!isConvertibleTo(anyerror!u32, Ex));
+    try testing.expect(!isConvertibleTo(error{}, Ex));
+    try testing.expect(!isConvertibleTo(enum {}, Ex));
+    try testing.expect(!isConvertibleTo(union {}, Ex));
+    try testing.expect(!isConvertibleTo(fn () void, Ex));
+    try testing.expect(!isConvertibleTo(anyopaque, Ex));
+    try testing.expect(!isConvertibleTo(@Vector(4, i32), Ex));
+    try testing.expect(!isConvertibleTo(@TypeOf(enum { val }.val), Ex));
+}
+
+test "isConvertibleTo union" {
+    const Ex = extern union { a: u32, b: void, c: bool };
+
+    try testing.expect(isConvertibleTo(Ex, Ex));
+    try testing.expect(isConvertibleTo(Ex, ?Ex));
+
+    try testing.expect(!isConvertibleTo(?Ex, Ex));
+    try testing.expect(!isConvertibleTo(*Ex, Ex));
+    try testing.expect(!isConvertibleTo([*]Ex, Ex));
+    try testing.expect(!isConvertibleTo([*:Ex{ .a = 0 }]Ex, Ex));
+    try testing.expect(!isConvertibleTo([*c]Ex, Ex));
+    try testing.expect(!isConvertibleTo([2]Ex, Ex));
+
+    try testing.expect(!isConvertibleTo(type, Ex));
+    try testing.expect(!isConvertibleTo(void, Ex));
+    try testing.expect(!isConvertibleTo(bool, Ex));
+    try testing.expect(!isConvertibleTo(noreturn, Ex));
+    try testing.expect(!isConvertibleTo(i32, Ex));
+    try testing.expect(!isConvertibleTo(u32, Ex));
+    try testing.expect(!isConvertibleTo(f32, Ex));
+    try testing.expect(!isConvertibleTo(struct {}, Ex));
+    try testing.expect(!isConvertibleTo(comptime_float, Ex));
+    try testing.expect(!isConvertibleTo(comptime_int, Ex));
+    try testing.expect(!isConvertibleTo(@TypeOf(undefined), Ex));
+    try testing.expect(!isConvertibleTo(@TypeOf(null), Ex));
+    try testing.expect(!isConvertibleTo(anyerror!u32, Ex));
+    try testing.expect(!isConvertibleTo(error{}, Ex));
+    try testing.expect(!isConvertibleTo(enum {}, Ex));
+    try testing.expect(!isConvertibleTo(union {}, Ex));
+    try testing.expect(!isConvertibleTo(fn () void, Ex));
+    try testing.expect(!isConvertibleTo(anyopaque, Ex));
+    try testing.expect(!isConvertibleTo(@Vector(4, i32), Ex));
+    try testing.expect(!isConvertibleTo(@TypeOf(enum { val }.val), Ex));
+}
+
+test "isConvertibleTo fn" {
+    const foo = struct {
+        fn foo() void {}
+    }.foo;
+
+    try testing.expect(isConvertibleTo(@TypeOf(foo), @TypeOf(foo)));
+    try testing.expect(isConvertibleTo(@TypeOf(foo), ?@TypeOf(foo)));
+
+    try testing.expect(!isConvertibleTo(?@TypeOf(foo), @TypeOf(foo)));
+    try testing.expect(!isConvertibleTo(*@TypeOf(foo), @TypeOf(foo)));
+    try testing.expect(!isConvertibleTo([2]@TypeOf(foo), @TypeOf(foo)));
+
+    try testing.expect(!isConvertibleTo(type, @TypeOf(foo)));
+    try testing.expect(!isConvertibleTo(void, @TypeOf(foo)));
+    try testing.expect(!isConvertibleTo(bool, @TypeOf(foo)));
+    try testing.expect(!isConvertibleTo(noreturn, @TypeOf(foo)));
+    try testing.expect(!isConvertibleTo(i32, @TypeOf(foo)));
+    try testing.expect(!isConvertibleTo(u32, @TypeOf(foo)));
+    try testing.expect(!isConvertibleTo(f32, @TypeOf(foo)));
+    try testing.expect(!isConvertibleTo(struct {}, @TypeOf(foo)));
+    try testing.expect(!isConvertibleTo(comptime_float, @TypeOf(foo)));
+    try testing.expect(!isConvertibleTo(comptime_int, @TypeOf(foo)));
+    try testing.expect(!isConvertibleTo(@TypeOf(undefined), @TypeOf(foo)));
+    try testing.expect(!isConvertibleTo(@TypeOf(null), @TypeOf(foo)));
+    try testing.expect(!isConvertibleTo(anyerror!u32, @TypeOf(foo)));
+    try testing.expect(!isConvertibleTo(error{}, @TypeOf(foo)));
+    try testing.expect(!isConvertibleTo(enum {}, @TypeOf(foo)));
+    try testing.expect(!isConvertibleTo(union {}, @TypeOf(foo)));
+    try testing.expect(!isConvertibleTo(anyopaque, @TypeOf(foo)));
+    try testing.expect(!isConvertibleTo(@Vector(4, i32), @TypeOf(foo)));
+    try testing.expect(!isConvertibleTo(@TypeOf(enum { val }.val), @TypeOf(foo)));
+}
+
+test "isConvertibleTo opaque" {
+    const Ex = opaque {};
+
+    try testing.expect(isConvertibleTo(Ex, Ex));
+
+    try testing.expect(!isConvertibleTo(*Ex, Ex));
+
+    try testing.expect(!isConvertibleTo(type, Ex));
+    try testing.expect(!isConvertibleTo(void, Ex));
+    try testing.expect(!isConvertibleTo(bool, Ex));
+    try testing.expect(!isConvertibleTo(noreturn, Ex));
+    try testing.expect(!isConvertibleTo(i32, Ex));
+    try testing.expect(!isConvertibleTo(u32, Ex));
+    try testing.expect(!isConvertibleTo(f32, Ex));
+    try testing.expect(!isConvertibleTo(struct {}, Ex));
+    try testing.expect(!isConvertibleTo(comptime_float, Ex));
+    try testing.expect(!isConvertibleTo(comptime_int, Ex));
+    try testing.expect(!isConvertibleTo(@TypeOf(undefined), Ex));
+    try testing.expect(!isConvertibleTo(@TypeOf(null), Ex));
+    try testing.expect(!isConvertibleTo(anyerror!u32, Ex));
+    try testing.expect(!isConvertibleTo(error{}, Ex));
+    try testing.expect(!isConvertibleTo(enum {}, Ex));
+    try testing.expect(!isConvertibleTo(union {}, Ex));
+    try testing.expect(!isConvertibleTo(fn () void, Ex));
+    try testing.expect(!isConvertibleTo(anyopaque, Ex));
+    try testing.expect(!isConvertibleTo(@Vector(4, i32), Ex));
+    try testing.expect(!isConvertibleTo(@TypeOf(enum { val }.val), Ex));
+}
+
+test "isConvertibleTo vector" {
+    const Ex = @Vector(4, i32);
+
+    try testing.expect(isConvertibleTo(Ex, Ex));
+    try testing.expect(isConvertibleTo(Ex, ?Ex));
+
+    try testing.expect(!isConvertibleTo(?Ex, Ex));
+    try testing.expect(!isConvertibleTo(*Ex, Ex));
+    try testing.expect(!isConvertibleTo([*]Ex, Ex));
+    try testing.expect(!isConvertibleTo([*:Ex{ 2, 3, 4, 5 }]Ex, Ex));
+    try testing.expect(!isConvertibleTo([*c]Ex, Ex));
+    try testing.expect(!isConvertibleTo([2]Ex, Ex));
+
+    try testing.expect(!isConvertibleTo(type, Ex));
+    try testing.expect(!isConvertibleTo(void, Ex));
+    try testing.expect(!isConvertibleTo(bool, Ex));
+    try testing.expect(!isConvertibleTo(noreturn, Ex));
+    try testing.expect(!isConvertibleTo(i32, Ex));
+    try testing.expect(!isConvertibleTo(u32, Ex));
+    try testing.expect(!isConvertibleTo(f32, Ex));
+    try testing.expect(!isConvertibleTo(struct {}, Ex));
+    try testing.expect(!isConvertibleTo(comptime_float, Ex));
+    try testing.expect(!isConvertibleTo(comptime_int, Ex));
+    try testing.expect(!isConvertibleTo(@TypeOf(undefined), Ex));
+    try testing.expect(!isConvertibleTo(@TypeOf(null), Ex));
+    try testing.expect(!isConvertibleTo(anyerror!u32, Ex));
+    try testing.expect(!isConvertibleTo(error{}, Ex));
+    try testing.expect(!isConvertibleTo(enum {}, Ex));
+    try testing.expect(!isConvertibleTo(union {}, Ex));
+    try testing.expect(!isConvertibleTo(fn () void, Ex));
+    try testing.expect(!isConvertibleTo(anyopaque, Ex));
+    try testing.expect(!isConvertibleTo(@Vector(4, i64), Ex));
+    try testing.expect(!isConvertibleTo(@TypeOf(enum { val }.val), Ex));
+}
+
+test "isConvertibleTo enum literal" {
+    const EnumType = enum { a };
+    const Ex = @TypeOf(EnumType.a);
+
+    try testing.expect(isConvertibleTo(Ex, Ex));
+    try testing.expect(isConvertibleTo(Ex, ?Ex));
+
+    try testing.expect(!isConvertibleTo(?Ex, Ex));
+    try testing.expect(!isConvertibleTo(*Ex, Ex));
+    try testing.expect(!isConvertibleTo([*]Ex, Ex));
+    try testing.expect(!isConvertibleTo([*:EnumType.a]Ex, Ex));
+    try testing.expect(!isConvertibleTo([*c]Ex, Ex));
+    try testing.expect(!isConvertibleTo([2]Ex, Ex));
+
+    try testing.expect(!isConvertibleTo(type, Ex));
+    try testing.expect(!isConvertibleTo(void, Ex));
+    try testing.expect(!isConvertibleTo(bool, Ex));
+    try testing.expect(!isConvertibleTo(noreturn, Ex));
+    try testing.expect(!isConvertibleTo(i32, Ex));
+    try testing.expect(!isConvertibleTo(u32, Ex));
+    try testing.expect(!isConvertibleTo(f32, Ex));
+    try testing.expect(!isConvertibleTo(struct {}, Ex));
+    try testing.expect(!isConvertibleTo(comptime_float, Ex));
+    try testing.expect(!isConvertibleTo(comptime_int, Ex));
+    try testing.expect(!isConvertibleTo(@TypeOf(undefined), Ex));
+    try testing.expect(!isConvertibleTo(@TypeOf(null), Ex));
+    try testing.expect(!isConvertibleTo(anyerror!u32, Ex));
+    try testing.expect(!isConvertibleTo(error{}, Ex));
+    try testing.expect(!isConvertibleTo(enum {}, Ex));
+    try testing.expect(!isConvertibleTo(union {}, Ex));
+    try testing.expect(!isConvertibleTo(fn () void, Ex));
+    try testing.expect(!isConvertibleTo(anyopaque, Ex));
+    try testing.expect(!isConvertibleTo(@Vector(4, i32), Ex));
+    try testing.expect(!isConvertibleTo(@TypeOf(enum { val }.val), Ex));
+}

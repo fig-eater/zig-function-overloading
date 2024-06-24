@@ -218,6 +218,8 @@ pub fn isConvertibleTo(comptime From: type, comptime To: type) bool {
             // .Array => |to| switch (from_type_info) {
             //     .Array => |from| from.
             // },
+            .ErrorUnion => |to| isConvertibleTo(From, to.error_set) or
+                isConvertibleTo(From, to.payload),
             else => false,
         };
     };
