@@ -174,9 +174,6 @@ test "isConvertibleTo float" {
 }
 
 test "isConvertibleTo pointer" {
-    // var a: u32 = 0;
-    // var ptr: *u32 = &a;
-
     try testing.expect(!isConvertibleTo(?*u32, *u32));
     try testing.expect(!isConvertibleTo(**u32, *u32));
     try testing.expect(!isConvertibleTo([*]*u32, *u32));
@@ -207,38 +204,37 @@ test "isConvertibleTo pointer" {
 
     // to pointer
     try testing.expect(isConvertibleTo(*u32, *u32));
-    // try testing.expect(!isConvertibleTo([*]u32, *u32));
+    try testing.expect(!isConvertibleTo([*]u32, *u32));
     // to optional pointer
+    try testing.expect(isConvertibleTo(?*u32, ?*u32));
     try testing.expect(isConvertibleTo(*u32, ?*u32));
     try testing.expect(isConvertibleTo([*c]u32, ?*u32));
+    try testing.expect(!isConvertibleTo([*]u32, ?*u32));
+    try testing.expect(!isConvertibleTo([]u32, ?*u32));
     // to c pointer
     try testing.expect(isConvertibleTo(*u32, [*c]u32));
-    // try testing.expect(isConvertibleTo(?*u32, [*c]u32));
+    try testing.expect(isConvertibleTo(?*u32, [*c]u32));
     // to pointer to many
     try testing.expect(isConvertibleTo([*:0]u32, [*]u32));
-    // try testing.expect(!isConvertibleTo(*u32, [*]u32));
+    try testing.expect(!isConvertibleTo(*u32, [*]u32));
     // to slice
     try testing.expect(isConvertibleTo([:0]u32, []u32));
-    // try testing.expect(!isConvertibleTo(*u32, []u32));
-    // try testing.expect(!isConvertibleTo(*[2]u32, []u32));
+    try testing.expect(!isConvertibleTo(*u32, []u32));
+    try testing.expect(!isConvertibleTo(*[2]u32, []u32));
     // to sentinel terminated slice
     try testing.expect(isConvertibleTo([:0]u32, [:0]u32));
     try testing.expect(isConvertibleTo([:0]u32, [:0]const u32));
     try testing.expect(!isConvertibleTo([:0]const u32, [:0]u32));
-    // try testing.expect(!isConvertibleTo([:1]u32, [:0]u32));
-    // try testing.expect(!isConvertibleTo(*u32, [:0]u32));
-    // try testing.expect(!isConvertibleTo([]u32, [:0]u32));
-    // try testing.expect(!isConvertibleTo([*:0]u32, [:0]u32));
-    // try testing.expect(!isConvertibleTo(*u32, [:0]u32));
+    try testing.expect(!isConvertibleTo([:1]u32, [:0]u32));
+    try testing.expect(!isConvertibleTo(*u32, [:0]u32));
+    try testing.expect(!isConvertibleTo([]u32, [:0]u32));
+    try testing.expect(!isConvertibleTo([*:0]u32, [:0]u32));
+    try testing.expect(!isConvertibleTo(*u32, [:0]u32));
 
     // to sentinel terminated pointers
-    // try testing.expect(isConvertibleTo([*:0]u32, [*:0]u32));
-    // try testing.expect(!isConvertibleTo([*]u32, [*:0]u32));
-    // try testing.expect(!isConvertibleTo(*u32, [*:0]u32));
-
-    const a: [:5]const u32 = @ptrCast(&[_]u32{ 2, 3, 5, 6 });
-    const b: [:5]const u32 = a;
-    std.debug.print("{any}\n", .{b});
+    try testing.expect(isConvertibleTo([*:0]u32, [*:0]u32));
+    try testing.expect(!isConvertibleTo([*]u32, [*:0]u32));
+    try testing.expect(!isConvertibleTo(*u32, [*:0]u32));
 }
 
 test "isConvertibleTo array" {}
